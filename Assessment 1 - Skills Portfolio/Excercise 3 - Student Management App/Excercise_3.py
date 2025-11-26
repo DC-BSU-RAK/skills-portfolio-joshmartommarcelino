@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, messagebox, scrolledtext, filedialog
 from typing import List, Dict, Tuple
 import os
 
@@ -191,7 +191,7 @@ class StudentManagerGUI:
         
         # Load sample data
         self.load_sample_data()
-    
+
     def create_menu(self):
         """Create menu bar"""
         menubar = tk.Menu(self.root)
@@ -201,6 +201,7 @@ class StudentManagerGUI:
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Load Data", command=self.load_data_dialog)
+        file_menu.add_command(label="Load studentMarks.txt", command=self.auto_load_student_marks)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         
@@ -215,139 +216,148 @@ class StudentManagerGUI:
         menubar.add_cascade(label="Analysis", menu=analysis_menu)
         analysis_menu.add_command(label="Highest Scoring Student", command=self.show_highest_student)
         analysis_menu.add_command(label="Lowest Scoring Student", command=self.show_lowest_student)
-    
+
     def create_widgets(self):
-        """Create main widgets"""
+        """Create main GUI widgets"""
         # Title
-        title_frame = tk.Frame(self.root, bg="#2c3e50", pady=15)
-        title_frame.pack(fill=tk.X)
-        
-        title_label = tk.Label(title_frame, text="Student Manager System", 
-                              font=("Arial", 20, "bold"), bg="#2c3e50", fg="white")
-        title_label.pack()
+        title = tk.Label(self.root, text="Student Manager System", 
+                        font=("Arial", 20, "bold"), bg="#2196F3", fg="white", pady=10)
+        title.pack(fill="x")
         
         # Button frame
-        button_frame = tk.Frame(self.root, pady=20)
-        button_frame.pack(fill=tk.X)
+        btn_frame = tk.Frame(self.root, bg="#f0f0f0", pady=10)
+        btn_frame.pack(fill="x")
         
-        btn_style = {"font": ("Arial", 11), "width": 25, "height": 2}
+        # Buttons
+        tk.Button(btn_frame, text="View All Student Records", 
+                 command=self.view_all_records, bg="#4CAF50", fg="white",
+                 font=("Arial", 11), padx=10, pady=5).pack(side="left", padx=5)
         
-        btn1 = tk.Button(button_frame, text="1. View All Student Records", 
-                        command=self.view_all_records, bg="#3498db", fg="white", **btn_style)
-        btn1.pack(pady=5)
+        tk.Button(btn_frame, text="View Individual Record", 
+                 command=self.view_individual_record, bg="#2196F3", fg="white",
+                 font=("Arial", 11), padx=10, pady=5).pack(side="left", padx=5)
         
-        btn2 = tk.Button(button_frame, text="2. View Individual Student Record", 
-                        command=self.view_individual_record, bg="#2ecc71", fg="white", **btn_style)
-        btn2.pack(pady=5)
+        tk.Button(btn_frame, text="Highest Score", 
+                 command=self.show_highest_student, bg="#FF9800", fg="white",
+                 font=("Arial", 11), padx=10, pady=5).pack(side="left", padx=5)
         
-        btn3 = tk.Button(button_frame, text="3. Show Highest Scoring Student", 
-                        command=self.show_highest_student, bg="#e74c3c", fg="white", **btn_style)
-        btn3.pack(pady=5)
+        tk.Button(btn_frame, text="Lowest Score", 
+                 command=self.show_lowest_student, bg="#f44336", fg="white",
+                 font=("Arial", 11), padx=10, pady=5).pack(side="left", padx=5)
         
-        btn4 = tk.Button(button_frame, text="4. Show Lowest Scoring Student", 
-                        command=self.show_lowest_student, bg="#f39c12", fg="white", **btn_style)
-        btn4.pack(pady=5)
+        # Output area
+        output_frame = tk.Frame(self.root)
+        output_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Output frame
-        output_frame = tk.LabelFrame(self.root, text="Output", font=("Arial", 12, "bold"), pady=10)
-        output_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        tk.Label(output_frame, text="Output:", font=("Arial", 12, "bold")).pack(anchor="w")
         
-        self.output_text = scrolledtext.ScrolledText(output_frame, font=("Courier", 10), 
-                                                     wrap=tk.WORD, height=20)
-        self.output_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.output_text = scrolledtext.ScrolledText(output_frame, wrap=tk.WORD, 
+                                                     font=("Courier", 10), height=25)
+        self.output_text.pack(fill="both", expand=True)
         
         # Status bar
         self.status_label = tk.Label(self.root, text="Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         self.status_label.pack(side=tk.BOTTOM, fill=tk.X)
-    
+
     def load_sample_data(self):
         """Load sample data for demonstration"""
-        sample_data = """5
-8439,Jake Hobbs,10,11,10,43
-7234,Sarah Johnson,18,17,19,89
-6521,Michael Brown,12,14,13,67
-9876,Emma Wilson,15,16,14,78
-5432,Oliver Davis,8,9,7,38"""
+        sample_data = """3
+S001,Alice Johnson,18,19,20,85
+S002,Bob Smith,15,16,14,72
+S003,Charlie Brown,20,19,18,90"""
         
         if self.manager.load_from_text(sample_data):
-            self.update_status(f"Sample data loaded: {len(self.manager.students)} students")
-            self.display_output("Sample data loaded successfully!\n\n" + 
-                              "Click 'View All Student Records' to see the data.")
-        else:
-            self.update_status("Failed to load sample data")
-    
-    def load_data_dialog(self):
-        """Open dialog to load data from file"""
-        from tkinter import filedialog
-        filename = filedialog.askopenfilename(
-            title="Select Student Data File",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
-        )
-        
-        if filename:
+            self.update_status("Sample data loaded")
+            self.display_output("Sample data loaded successfully.\nClick 'View All Student Records' to see results.")
+
+    def auto_load_student_marks(self):
+        """Automatically load studentMarks.txt from the same folder."""
+        filename = "studentMarks.txt"
+
+        if os.path.exists(filename):
             if self.manager.load_from_file(filename):
                 self.update_status(f"Loaded {len(self.manager.students)} students from {filename}")
-                messagebox.showinfo("Success", f"Successfully loaded {len(self.manager.students)} students!")
+                self.display_output(
+                    f"Successfully loaded {len(self.manager.students)} students from {filename}.\n\n"
+                    "Click 'View All Student Records' to see results."
+                )
             else:
-                messagebox.showerror("Error", "Failed to load data from file")
-    
+                self.update_status("Failed to load studentMarks.txt")
+                messagebox.showerror("Error", "studentMarks.txt found but could not be loaded.")
+        else:
+            self.update_status("studentMarks.txt not found")
+            messagebox.showwarning(
+                "File Not Found",
+                "studentMarks.txt was not found in this folder.\n"
+                "Please place it beside the .py file."
+            )
+
+    def load_data_dialog(self):
+        """Open a file dialog to load a student marks file."""
+        filename = filedialog.askopenfilename(
+            title="Select studentMarks.txt file",
+            filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")]
+        )
+
+        if filename:
+            if self.manager.load_from_file(filename):
+                self.update_status(f"Loaded data from {filename}")
+                self.display_output(
+                    f"Successfully loaded {len(self.manager.students)} student records."
+                )
+            else:
+                messagebox.showerror("Error", "Failed to load the selected file.")
+
     def view_all_records(self):
         """Display all student records"""
-        if not self.manager.students:
-            messagebox.showwarning("No Data", "No student data loaded!")
-            return
-        
         output = self.manager.get_all_records()
         self.display_output(output)
         self.update_status(f"Displaying {len(self.manager.students)} student records")
-    
+
     def view_individual_record(self):
-        """Display dialog to select and view individual student"""
+        """Display individual student record"""
         if not self.manager.students:
-            messagebox.showwarning("No Data", "No student data loaded!")
+            messagebox.showwarning("No Data", "Please load student data first.")
             return
         
-        # Create selection dialog
+        # Create dialog for student selection
         dialog = tk.Toplevel(self.root)
         dialog.title("Select Student")
-        dialog.geometry("400x300")
-        dialog.transient(self.root)
-        dialog.grab_set()
+        dialog.geometry("400x150")
         
-        tk.Label(dialog, text="Select a student:", font=("Arial", 12, "bold")).pack(pady=10)
+        tk.Label(dialog, text="Enter Student Code or Name:", font=("Arial", 11)).pack(pady=10)
         
-        # Listbox with student names
-        frame = tk.Frame(dialog)
-        frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        entry = tk.Entry(dialog, font=("Arial", 11), width=30)
+        entry.pack(pady=5)
+        entry.focus()
         
-        scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=("Arial", 10))
-        listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=listbox.yview)
-        
-        for student in self.manager.students:
-            listbox.insert(tk.END, f"{student.name} ({student.code})")
-        
-        def on_select():
-            selection = listbox.curselection()
-            if selection:
-                idx = selection[0]
-                student = self.manager.students[idx]
+        def search_student():
+            search_term = entry.get().strip()
+            if not search_term:
+                messagebox.showwarning("Input Required", "Please enter a student code or name.")
+                return
+            
+            # Try searching by code first
+            student = self.manager.get_student_by_code(search_term)
+            
+            # If not found, try by name
+            if not student:
+                student = self.manager.get_student_by_name(search_term)
+            
+            if student:
                 self.display_output(student.format_record())
                 self.update_status(f"Displaying record for {student.name}")
                 dialog.destroy()
+            else:
+                messagebox.showerror("Not Found", f"No student found with code or name: {search_term}")
         
-        tk.Button(dialog, text="View Record", command=on_select, 
-                 bg="#3498db", fg="white", font=("Arial", 11), width=15).pack(pady=10)
-    
+        tk.Button(dialog, text="Search", command=search_student, 
+                 bg="#2196F3", fg="white", font=("Arial", 11), padx=20, pady=5).pack(pady=10)
+        
+        entry.bind('<Return>', lambda e: search_student())
+
     def show_highest_student(self):
-        """Display student with highest score"""
-        if not self.manager.students:
-            messagebox.showwarning("No Data", "No student data loaded!")
-            return
-        
+        """Display highest scoring student"""
         student = self.manager.get_highest_scoring_student()
         if student:
             output = "=" * 50 + "\n"
@@ -355,14 +365,12 @@ class StudentManagerGUI:
             output += "=" * 50 + "\n\n"
             output += student.format_record()
             self.display_output(output)
-            self.update_status(f"Highest: {student.name} - {student.overall_percentage:.2f}%")
-    
+            self.update_status(f"Highest score: {student.name} ({student.overall_percentage:.2f}%)")
+        else:
+            messagebox.showwarning("No Data", "Please load student data first.")
+
     def show_lowest_student(self):
-        """Display student with lowest score"""
-        if not self.manager.students:
-            messagebox.showwarning("No Data", "No student data loaded!")
-            return
-        
+        """Display lowest scoring student"""
         student = self.manager.get_lowest_scoring_student()
         if student:
             output = "=" * 50 + "\n"
@@ -370,13 +378,15 @@ class StudentManagerGUI:
             output += "=" * 50 + "\n\n"
             output += student.format_record()
             self.display_output(output)
-            self.update_status(f"Lowest: {student.name} - {student.overall_percentage:.2f}%")
-    
+            self.update_status(f"Lowest score: {student.name} ({student.overall_percentage:.2f}%)")
+        else:
+            messagebox.showwarning("No Data", "Please load student data first.")
+
     def display_output(self, text: str):
         """Display text in output area"""
         self.output_text.delete(1.0, tk.END)
         self.output_text.insert(1.0, text)
-    
+
     def update_status(self, message: str):
         """Update status bar"""
         self.status_label.config(text=message)
