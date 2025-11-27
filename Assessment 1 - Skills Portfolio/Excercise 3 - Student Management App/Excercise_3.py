@@ -371,8 +371,40 @@ class StudentManager:
     def get_student_count(self) -> int:
         """Get the total number of students loaded."""
         return len(self.students)
+    def sort_students(self, key: str, ascending: bool = True):
+        """Sort student records by name or percentage."""
+        if key == "name":
+            self.students.sort(key=lambda s: s.name.lower(), reverse=not ascending)
+        elif key == "percentage":
+            self.students.sort(key=lambda s: s.overall_percentage, reverse=not ascending)
 
+    def add_student(self, student: Student):
+        """Add a new student to memory."""
+        self.students.append(student)
 
+    def delete_student(self, identifier: str) -> bool:
+        """Delete student by code or name."""
+        for s in self.students:
+            if s.code == identifier or identifier.lower() in s.name.lower():
+                self.students.remove(s)
+                return True
+        return False
+
+    def update_student(self, code: str, updated: Student) -> bool:
+        """Update an existing student's full record."""
+        for i, s in enumerate(self.students):
+            if s.code == code:
+                self.students[i] = updated
+                return True
+        return False
+
+    def save_to_file(self, filename: str):
+        """Persist student records to file."""
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(str(len(self.students)) + "\n")
+            for s in self.students:
+                line = f"{s.code},{s.name},{s.mark1},{s.mark2},{s.mark3},{s.exam}\n"
+                f.write(line)
 class StudentManagerGUI:
     """
     Main GUI application for the Student Manager System.
@@ -401,7 +433,8 @@ class StudentManagerGUI:
         """
         self.root = root
         self.root.title("Student Manager System")
-        self.root.geometry("900x700")
+        self.root.geometry("1200x800")
+        self.root.resizable(False, False)
         
         # Initialize data manager
         self.manager = StudentManager()
@@ -460,7 +493,11 @@ class StudentManagerGUI:
             ("View All Student Records", self.view_all_records, 'success'),
             ("View Individual Record", self.view_individual_record, 'info'),
             ("Highest Score", self.show_highest_student, 'warning'),
-            ("Lowest Score", self.show_lowest_student, 'danger')
+            ("Lowest Score", self.show_lowest_student, 'danger'),
+            ("Sort Records", self.sort_records_dialog, 'info'),
+            ("Add Student", self.add_student_dialog, 'success'),
+            ("Delete Student", self.delete_student_dialog, 'danger'),
+            ("Update Student", self.update_student_dialog, 'warning')
         ]
         
         for text, command, color in buttons:
@@ -730,6 +767,143 @@ S003,Charlie Brown,20,19,18,90"""
         else:
             messagebox.showwarning("No Data", "Please load student data first.")
     
+    
+    def sort_records_dialog(self):
+        """Open sorting options dialog."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Sort Records")
+        dialog.geometry("300x220")
+        dialog.grab_set()
+
+        tk.Label(dialog, text="Sort By:", font=("Arial", 11, "bold")).pack(pady=5)
+
+        sort_by = ttk.Combobox(dialog, values=["Name", "Percentage"], state="readonly")
+        sort_by.pack()
+        sort_by.current(0)
+
+        tk.Label(dialog, text="Order:", font=("Arial", 11, "bold")).pack(pady=5)
+
+        order = ttk.Combobox(dialog, values=["Ascending", "Descending"], state="readonly")
+        order.pack()
+        order.current(0)
+
+        def apply_sort():
+            key = "name" if sort_by.get() == "Name" else "percentage"
+            ascending = order.get() == "Ascending"
+
+            self.manager.sort_students(key, ascending)
+            self.display_output(self.manager.get_all_records())
+            self.update_status("Records sorted successfully")
+            dialog.destroy()
+
+        tk.Button(dialog, text="Sort", command=apply_sort).pack(pady=15)
+
+    def add_student_dialog(self):
+        """Dialog for adding a new student record."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Add Student")
+        dialog.geometry("350x400")
+        dialog.grab_set()
+
+        fields = ["Student Number", "Name", "CW1", "CW2", "CW3", "Exam"]
+        entries = {}
+
+        for field in fields:
+            tk.Label(dialog, text=field).pack()
+            entry = tk.Entry(dialog)
+            entry.pack()
+            entries[field] = entry
+
+        def save_student():
+            try:
+                student = Student(
+                    entries["Student Number"].get(),
+                    entries["Name"].get(),
+                    int(entries["CW1"].get()),
+                    int(entries["CW2"].get()),
+                    int(entries["CW3"].get()),
+                    int(entries["Exam"].get())
+                )
+
+                self.manager.add_student(student)
+                self.manager.save_to_file("../../A1 - Resources/studentMarks.txt")
+
+                self.update_status("Student added successfully")
+                dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Invalid numeric input")
+
+        tk.Button(dialog, text="Save", command=save_student).pack(pady=15)
+
+    def delete_student_dialog(self):
+        """Remove a student record by ID or Name."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Delete Student")
+        dialog.geometry("300x150")
+        dialog.grab_set()
+
+        tk.Label(dialog, text="Enter Student Number or Name").pack(pady=10)
+        entry = tk.Entry(dialog)
+        entry.pack()
+
+        def delete():
+            if self.manager.delete_student(entry.get()):
+                self.manager.save_to_file("../../A1 - Resources/studentMarks.txt")
+                self.update_status("Student deleted")
+                dialog.destroy()
+            else:
+                messagebox.showerror("Not Found", "Student not found")
+
+        tk.Button(dialog, text="Delete", command=delete).pack(pady=10)
+
+    def update_student_dialog(self):
+        """Edit an existing student's record."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Update Student")
+        dialog.geometry("350x430")
+        dialog.grab_set()
+
+        tk.Label(dialog, text="Student Number to Update").pack()
+        code_entry = tk.Entry(dialog)
+        code_entry.pack()
+
+        fields = ["Name", "CW1", "CW2", "CW3", "Exam"]
+        entries = {}
+
+        for field in fields:
+            tk.Label(dialog, text=field).pack()
+            entry = tk.Entry(dialog)
+            entry.pack()
+            entries[field] = entry
+
+        def update():
+            student = self.manager.get_student_by_code(code_entry.get())
+
+            if not student:
+                messagebox.showerror("Error", "Student not found")
+                return
+
+            try:
+                updated = Student(
+                    student.code,
+                    entries["Name"].get(),
+                    int(entries["CW1"].get()),
+                    int(entries["CW2"].get()),
+                    int(entries["CW3"].get()),
+                    int(entries["Exam"].get())
+                )
+
+                self.manager.update_student(student.code, updated)
+                self.manager.save_to_file("../../A1 - Resources/studentMarks.txt")
+
+                self.update_status("Student record updated")
+                dialog.destroy()
+
+            except ValueError:
+                messagebox.showerror("Error", "Invalid numeric input")
+
+        tk.Button(dialog, text="Update", command=update).pack(pady=15)
+    
     def display_output(self, text: str):
         """
         Display text in the output area.
@@ -748,8 +922,6 @@ S003,Charlie Brown,20,19,18,90"""
             message: Status message to display
         """
         self.status_label.config(text=message)
-
-
 def main():
     """Main entry point for the application."""
     root = tk.Tk()
